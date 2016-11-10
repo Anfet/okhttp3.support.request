@@ -1,6 +1,5 @@
 package net.anfet.okhttpwrapper;
 
-import android.support.annotation.WorkerThread;
 import android.util.Log;
 
 import okhttp3.Response;
@@ -30,9 +29,8 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	 * Вызывается для процессинга результата
 	 * @param supportRequest запрос
 	 * @param response       ответ
-	 * @param t         результат
+	 * @param t              результат
 	 */
-	@WorkerThread
 	protected void onProcessResult(SupportRequest supportRequest, Response response, T t) {
 
 	}
@@ -68,7 +66,7 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	 * Вызывается после получения нужного ответа
 	 * @param request  запрос
 	 * @param response ответ
-	 * @param t   результат обработки
+	 * @param t        результат обработки
 	 */
 	protected void onPostProcess(SupportRequest request, Response response, T t) {
 

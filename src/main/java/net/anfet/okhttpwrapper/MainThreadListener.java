@@ -1,7 +1,6 @@
 package net.anfet.okhttpwrapper;
 
 import android.os.Handler;
-import android.support.annotation.MainThread;
 
 import okhttp3.Response;
 
@@ -12,7 +11,6 @@ public class MainThreadListener<T> extends WorkerThreadListener<T> {
 
 	protected Handler handler;
 
-	@MainThread
 	public MainThreadListener(ResponceProcessor<T> processor) {
 		super(processor);
 		handler = new Handler();
@@ -59,7 +57,6 @@ public class MainThreadListener<T> extends WorkerThreadListener<T> {
 	 * @param supportRequest выполняемый запрос
 	 * @param params         параметры
 	 */
-	@MainThread
 	public void onPublishProgress(SupportRequest supportRequest, Object... params) {
 
 	}

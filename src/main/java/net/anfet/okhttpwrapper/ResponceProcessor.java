@@ -3,7 +3,7 @@ package net.anfet.okhttpwrapper;
 import okhttp3.Response;
 
 /**
- * Интерфес процессора данных для {@link SupportRequest}.
+ * Processor interface for {@link SupportRequest}
  */
 public interface ResponceProcessor<T> {
 

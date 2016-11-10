@@ -1,6 +1,6 @@
 package net.anfet.okhttpwrapper;
 
-import android.support.annotation.WorkerThread;
+
 import android.util.Log;
 
 import junit.framework.Assert;
@@ -178,7 +178,6 @@ public class SupportRequest {
 		}
 	}
 
-	@WorkerThread
 	public void execute() {
 		if (runningTask != null && !runningTask.isRuninng()) {
 			return;
