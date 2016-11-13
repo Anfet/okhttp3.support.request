@@ -31,14 +31,15 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	 * @param response       ответ
 	 * @param t              результат
 	 */
-	protected void onProcessResult(SupportRequest supportRequest, Response response, T t) {
+	protected void onProcessResult(SupportRequest supportRequest, Response response, T t) throws Exception {
 
 	}
 
 	@Override
 	public void publishResponce(SupportRequest supportRequest, Response response) {
 		try {
-			onPostProcess(supportRequest, response, processResult(supportRequest, response));
+			T result = processResult(supportRequest, response);
+			onPostProcess(supportRequest, response, result);
 			onComplete(supportRequest);
 		} catch (InterruptedException ex) {
 			return;

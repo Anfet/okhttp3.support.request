@@ -15,7 +15,7 @@ public interface ISupportRequestListener<T> {
 	void publishResponce(SupportRequest supportRequest, Response response);
 
 	/**
-	 * Вызывается при ошибке запроса. Это может быть как {@link java.io.IOException} который укажет на отсутствие связи, так и любая другая ошибка от {@link #onResponce(SupportRequest, Response)}
+	 * Вызывается при ошибке запроса. Это может быть как {@link java.io.IOException} который укажет на отсутствие связи, так и любая другая ошибка от {@link #publishResponce(SupportRequest, Response)} (SupportRequest, Response)}
 	 * @param supportRequest запрос
 	 * @param throwable      ошибка
 	 */
