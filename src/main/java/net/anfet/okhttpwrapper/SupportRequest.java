@@ -8,7 +8,6 @@ import junit.framework.Assert;
 import net.anfet.tasks.Runner;
 import net.anfet.tasks.Tasks;
 
-import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
@@ -210,8 +209,6 @@ public class SupportRequest {
 			} finally {
 				response.close();
 			}
-		} catch (IOException ex) {
-			throw new ConnectionTimeout("Connection timeout to " + request.url());
 		} catch (Exception e) {
 			onProcessError(e);
 		}
