@@ -28,6 +28,10 @@ public class GsonElementProcessor implements ResponceProcessor<JsonElement> {
 
 	@Override
 	public JsonElement getResult(Response response) throws Exception {
-		return builder.create().fromJson(response.body().charStream(), JsonElement.class);
+		try {
+			return builder.create().fromJson(response.body().charStream(), JsonElement.class);
+		} finally {
+			response.close();
+		}
 	}
 }

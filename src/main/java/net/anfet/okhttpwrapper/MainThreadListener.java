@@ -9,7 +9,7 @@ import okhttp3.Response;
  */
 public class MainThreadListener<T> extends WorkerThreadListener<T> {
 
-	protected Handler handler;
+	private Handler handler;
 
 	public MainThreadListener(ResponceProcessor<T> processor) {
 		super(processor);
@@ -20,36 +20,42 @@ public class MainThreadListener<T> extends WorkerThreadListener<T> {
 	public void publishResponce(final SupportRequest supportRequest, final Response response) {
 		try {
 			final T result = processResult(supportRequest, response);
-
-			if (!supportRequest.isCancelled()) {
-				handler.post(new Runnable() {
-					@Override
-					public void run() {
-						try {
-							onPostProcess(supportRequest, response, result);
-						} finally {
-							onComplete(supportRequest);
-						}
-					}
-				});
-			}
-		} catch (InterruptedException ex) {
-			return;
+			publishPostProcess(supportRequest, response, result);
+		} catch (InterruptedException ignored) {
 		} catch (final Exception ex) {
-			if (!supportRequest.isCancelled()) {
-				publishError(supportRequest, ex);
-			}
+			publishError(supportRequest, ex);
+		}
+	}
+
+	private void publishPostProcess(final SupportRequest supportRequest, final Response response, final T result) {
+		if (!supportRequest.isCancelled()) {
+			handler.post(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						onPostProcess(supportRequest, response, result);
+					} finally {
+						onComplete(supportRequest);
+					}
+				}
+			});
 		}
 	}
 
 	@Override
 	public void publishError(final SupportRequest supportRequest, final Throwable throwable) {
-		handler.post(new Runnable() {
-			@Override
-			public void run() {
-				onError(supportRequest, throwable);
-			}
-		});
+		if (!supportRequest.isCancelled()) {
+			handler.post(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						onError(supportRequest, throwable);
+					} finally {
+						onComplete(supportRequest);
+					}
+				}
+			});
+		}
 	}
 
 	/**

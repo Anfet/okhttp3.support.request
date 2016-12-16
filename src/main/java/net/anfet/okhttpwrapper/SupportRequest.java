@@ -41,7 +41,6 @@ public class SupportRequest {
 	private final int id;
 	private ISupportRequestListener listener;
 	private Request.Builder builder;
-	private Request request;
 	private Response response;
 	private Runner runningTask;
 
@@ -49,7 +48,6 @@ public class SupportRequest {
 		id = ai.incrementAndGet();
 		headers = new HashMap<>();
 		listener = null;
-		request = null;
 		response = null;
 		runningTask = null;
 	}
@@ -192,6 +190,7 @@ public class SupportRequest {
 			builder.addHeader(key, persistentHeaders.get(key));
 		}
 
+
 		try {
 			//билдим запрос
 			Request request = builder.build();
@@ -212,7 +211,6 @@ public class SupportRequest {
 		} catch (Exception e) {
 			onProcessError(e);
 		}
-
 	}
 
 	private void onProcessError(Exception e) {

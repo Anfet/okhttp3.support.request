@@ -40,12 +40,13 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 		try {
 			T result = processResult(supportRequest, response);
 			onPostProcess(supportRequest, response, result);
-			onComplete(supportRequest);
 		} catch (InterruptedException ex) {
 			return;
 		} catch (Exception ex) {
 			publishError(supportRequest, ex);
 		}
+
+		onComplete(supportRequest);
 	}
 
 	/**
@@ -55,7 +56,6 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	 */
 	protected void onError(SupportRequest supportRequest, Throwable error) {
 		Log.e(getClass().getSimpleName(), error.getMessage(), error);
-		onComplete(supportRequest);
 	}
 
 	@Override
