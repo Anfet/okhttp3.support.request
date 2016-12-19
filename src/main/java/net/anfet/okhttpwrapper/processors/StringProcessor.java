@@ -1,4 +1,6 @@
-package net.anfet.okhttpwrapper;
+package net.anfet.okhttpwrapper.processors;
+
+import net.anfet.okhttpwrapper.abstractions.ResponceProcessor;
 
 import okhttp3.Response;
 

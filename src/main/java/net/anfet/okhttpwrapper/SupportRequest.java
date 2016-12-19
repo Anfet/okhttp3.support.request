@@ -1,25 +1,25 @@
 package net.anfet.okhttpwrapper;
 
 
-import android.util.Log;
-
 import junit.framework.Assert;
 
+import net.anfet.okhttpwrapper.abstractions.IRequestListener;
 import net.anfet.tasks.Runner;
 import net.anfet.tasks.Tasks;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -27,88 +27,72 @@ import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
- * Created by Oleg on 13.07.2016.
+ * Запрос поддержки для okhttp
  */
 public class SupportRequest {
+	private static OkHttpClient httpClient = null;
 
-
-	private static final HashMap<String, String> persistentHeaders = new HashMap<>();
-	private static long TxRx = 0L;
-	private static OkHttpClient okHttpClient = null;
-	private static AtomicInteger ai = new AtomicInteger(0);
-
-	private final HashMap<String, String> headers;
-	private final int id;
-	private ISupportRequestListener listener;
+	private IRequestListener listener;
 	private Request.Builder builder;
+
+	private Request request;
 	private Response response;
-	private Runner runningTask;
+
+	private Long fetch;
+	private Long process;
+
 
 	public SupportRequest() {
-		id = ai.incrementAndGet();
-		headers = new HashMap<>();
+		builder = new Request.Builder();
 		listener = null;
 		response = null;
-		runningTask = null;
+	}
+
+
+	private static SupportRequest newRequest(String method, String url, RequestBody data) {
+		SupportRequest request = new SupportRequest();
+		request.setMethod(method, url, data);
+		return request;
 	}
 
 	public static SupportRequest get(String url) {
-		SupportRequest supportRequest = new SupportRequest();
-		supportRequest.builder = new Request.Builder();
-		supportRequest.builder.url(url);
-		return supportRequest;
+		return newRequest("GET", url, null);
 	}
 
 	public static SupportRequest post(String url, RequestBody postBody) {
-		SupportRequest supportRequest = new SupportRequest();
-		supportRequest.builder = new Request.Builder();
-		supportRequest.builder.post(postBody);
-		supportRequest.builder.url(url);
-		return supportRequest;
+		return newRequest("POST", url, postBody);
+	}
+
+	private SupportRequest setMethod(String method, String url, RequestBody data) {
+		builder.method(method, data);
+		HttpUrl httpUrl = HttpUrl.parse(url);
+		if (httpUrl == null) {
+			throw new IllegalArgumentException("Malformed URL: " + url);
+		}
+
+		builder.url(httpUrl);
+		return this;
 	}
 
 	public static SupportRequest delete(String url, RequestBody postBody) {
-		SupportRequest supportRequest = new SupportRequest();
-		supportRequest.builder = new Request.Builder();
-		supportRequest.builder.delete(postBody);
-		supportRequest.builder.url(url);
-		return supportRequest;
+		return newRequest("DELETE", url, postBody);
 	}
 
 	public static SupportRequest put(String url, RequestBody postBody) {
-		SupportRequest supportRequest = new SupportRequest();
-		supportRequest.builder = new Request.Builder();
-		supportRequest.builder.put(postBody);
-		supportRequest.builder.url(url);
-		return supportRequest;
-	}
-
-	public static void addPersistentHeader(String name, String value) {
-		synchronized (persistentHeaders) {
-			persistentHeaders.put(name, value);
-		}
-	}
-
-	public static void removePersistentHeader(String name) {
-		synchronized (persistentHeaders) {
-			persistentHeaders.remove(name);
-		}
+		return newRequest("PUT", url, postBody);
 	}
 
 	public static void init(int readTimeout, int connectTimeout, HttpLoggingInterceptor.Level logLevel) {
-		Assert.assertNull(okHttpClient);
-
+		Assert.assertNull(httpClient);
 		HttpLoggingInterceptor logging = new HttpLoggingInterceptor().setLevel(logLevel);
-		okHttpClient = new OkHttpClient.Builder().readTimeout(readTimeout, TimeUnit.MILLISECONDS).connectTimeout(connectTimeout, TimeUnit.MILLISECONDS).addInterceptor(logging).build();
-		SupportRequest.setOkHttpClient(okHttpClient);
-	}
-
-	public static OkHttpClient getOkHttpClient() {
-		return okHttpClient;
+		httpClient = new OkHttpClient.Builder()
+							   .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
+							   .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
+							   .addInterceptor(logging).build();
 	}
 
 	public static void setOkHttpClient(OkHttpClient okHttpClient) {
-		SupportRequest.okHttpClient = okHttpClient;
+		SupportRequest.httpClient = okHttpClient;
 	}
 
 	public static OkHttpClient.Builder getUnsafeOkHttpClient() throws NoSuchAlgorithmException, KeyManagementException {
@@ -139,17 +123,18 @@ public class SupportRequest {
 
 		OkHttpClient.Builder builder = new OkHttpClient.Builder();
 		builder.sslSocketFactory(sslSocketFactory);
-		builder.hostnameVerifier(AllTrustHostnameVerifier.getInstance());
+		builder.hostnameVerifier(new HostnameVerifier() {
+			@Override
+			public boolean verify(String hostname, SSLSession session) {
+				return true;
+			}
+		});
 
 		return builder;
 
 	}
 
-	public int getId() {
-		return id;
-	}
-
-	public SupportRequest setListener(ISupportRequestListener listener) {
+	public SupportRequest setListener(IRequestListener listener) {
 		this.listener = listener;
 		return this;
 	}
@@ -160,74 +145,102 @@ public class SupportRequest {
 	}
 
 	public void queue(Object owner) {
-		Tasks.execute(runningTask = new Runner(owner) {
+		Tasks.execute(new Runner(owner) {
+
+			Object result;
+
+			@Override
+			protected void onPreExecute() throws Exception {
+				super.onPreExecute();
+
+				request = builder.build();
+				builder = null;
+
+				if (listener != null) {
+					listener.publishPreExecute(SupportRequest.this, request);
+				}
+			}
+
 			@Override
 			protected void doInBackground() throws Exception {
-				execute();
+				response = httpClient.newCall(request).execute();
+				try {
+					fetch = response.receivedResponseAtMillis() - response.sentRequestAtMillis();
+					if (listener != null) {
+						result = listener.publishProcessResult(SupportRequest.this, request, response);
+					}
+				} finally {
+					response.close();
+				}
+			}
+
+			@Override
+			protected void onPostExecute() {
+				super.onPostExecute();
+
+				if (listener != null) {
+					listener.publishPostProcess(SupportRequest.this, result);
+				}
+			}
+
+			@Override
+			protected void onFinished() {
+				super.onFinished();
+				if (listener != null) {
+					listener.publishComplete(SupportRequest.this);
+				}
+
+				result = null;
+				builder = null;
+				request = null;
+				response = null;
+				listener = null;
+			}
+
+			@Override
+			protected void onError(Throwable throwable) {
+				super.onError(throwable);
+				if (listener != null) {
+					listener.publishError(SupportRequest.this, throwable);
+				}
 			}
 		});
 	}
 
 
-	public void cancel() {
-		if (runningTask != null && runningTask.isRuninng()) {
-			runningTask.cancel();
-		}
-	}
-
 	public void execute() {
-		if (runningTask != null && !runningTask.isRuninng()) {
-			return;
-		}
-
-		//добавляем в реквест хедеры
-		for (String key : headers.keySet()) {
-			builder.addHeader(key, headers.get(key));
-		}
-
-		//добавляем статичные хедеры
-		for (String key : persistentHeaders.keySet()) {
-			builder.addHeader(key, persistentHeaders.get(key));
-		}
-
-
 		try {
-			//билдим запрос
-			Request request = builder.build();
-
-
-			//запускаем на выполение
-			response = okHttpClient.newCall(request).execute();
 			try {
+				//билдим запрос
+				request = builder.build();
 
-				if (listener != null && (runningTask == null || runningTask.isRuninng())) {
-					//если мы сюда привалили - значит запрос дошел до сервера и получился ответ. Может быть и не всегда хороший
-					//оповещаем листенеры
-					listener.publishResponce(this, response);
+				//запускаем на выполение
+				response = httpClient.newCall(request).execute();
+				try {
+					fetch = response.receivedResponseAtMillis() - response.sentRequestAtMillis();
+
+					if (listener != null) {
+						Object result = listener.publishProcessResult(this, request, response);
+						listener.publishPostProcess(this, result);
+					}
+				} finally {
+					response.close();
 				}
-			} finally {
-				response.close();
+			} catch (Exception e) {
+				if (listener != null) {
+					listener.publishError(this, e);
+				}
 			}
-		} catch (Exception e) {
-			onProcessError(e);
+		} finally {
+			if (listener != null) {
+				listener.publishComplete(this);
+			}
+
+			builder = null;
+			request = null;
+			response = null;
+			listener = null;
 		}
 	}
 
-	private void onProcessError(Exception e) {
-		//если мы упали сюда, то тут может быть connectionTimeout или еще какая ересь на транспортном уровне. чаще всего может встречаться отмена запроса, которая тоже падает сюда
-
-		if (listener != null && (runningTask == null || runningTask.isRuninng())) {
-			try {
-				listener.publishError(this, e);
-			} catch (Exception ex) {
-				Log.e(getClass().getSimpleName(), ex.getMessage(), ex);
-			}
-		} else {
-			Log.e(getClass().getSimpleName(), e.getMessage(), e);
-		}
-	}
-
-	public boolean isCancelled() {
-		return runningTask != null && !runningTask.isRuninng();
-	}
 }
