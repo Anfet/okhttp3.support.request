@@ -2,12 +2,15 @@ package net.anfet.okhttpwrapper;
 
 import android.util.Log;
 
+import net.anfet.okhttpwrapper.abstraction.ResponceProcessor;
+
+import okhttp3.Request;
 import okhttp3.Response;
 
 /**
  * Дженерик для любого типа ответа обрабатываюшийся в потоке
  */
-public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
+public class WorkerThreadListener<T> {
 
 	protected ResponceProcessor<T> processor;
 
@@ -16,37 +19,29 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	}
 
 
-	protected T processResult(SupportRequest supportRequest, Response response) throws Exception {
-		T result = null;
-		if (processor != null) {
-			result = processor.getResult(response);
-		}
-		onProcessResult(supportRequest, response, result);
-		return result;
-	}
-
 	/**
 	 * Вызывается для процессинга результата
 	 * @param supportRequest запрос
 	 * @param response       ответ
 	 * @param t              результат
 	 */
-	protected void onProcessResult(SupportRequest supportRequest, Response response, T t) throws Exception {
+	protected void onProcessResult(final SupportRequest supportRequest, final Response response, final T t) throws Exception {
 
 	}
 
-	@Override
-	public void publishResponce(SupportRequest supportRequest, Response response) {
-		try {
-			T result = processResult(supportRequest, response);
-			onPostProcess(supportRequest, response, result);
-		} catch (InterruptedException ex) {
-			return;
-		} catch (Exception ex) {
-			publishError(supportRequest, ex);
-		}
 
-		onComplete(supportRequest);
+	T publishResponce(final SupportRequest supportRequest, final Response response) throws Exception {
+		T result = null;
+		try {
+			if (processor != null) {
+				result = processor.getResult(response);
+			}
+
+			onProcessResult(supportRequest, response, result);
+		} catch (InterruptedException ignored) {
+			//this is ignored
+		}
+		return result;
 	}
 
 	/**
@@ -54,12 +49,12 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	 * @param supportRequest запрос
 	 * @param error          ошибка
 	 */
-	protected void onError(SupportRequest supportRequest, Throwable error) {
+	protected void onError(final SupportRequest supportRequest, final Throwable error) {
 		Log.e(getClass().getSimpleName(), error.getMessage(), error);
 	}
 
-	@Override
-	public void publishError(SupportRequest supportRequest, Throwable throwable) {
+
+	void publishError(final SupportRequest supportRequest, final Throwable throwable) {
 		onError(supportRequest, throwable);
 	}
 
@@ -69,7 +64,7 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	 * @param response ответ
 	 * @param t        результат обработки
 	 */
-	protected void onPostProcess(SupportRequest request, Response response, T t) {
+	protected void onPostProcess(final SupportRequest request, final Response response, final T t) {
 
 	}
 
@@ -77,7 +72,23 @@ public class WorkerThreadListener<T> implements ISupportRequestListener<T> {
 	 * Вызывается всегде после окончания обработки запроса. Вызывается один раз
 	 * @param request запрос
 	 */
-	protected void onComplete(SupportRequest request) {
+	protected void onComplete(final SupportRequest request) {
 
+	}
+
+	void publishPreExecute(final SupportRequest supportRequest, final Request request) throws Exception {
+		onPreExecute(supportRequest, request);
+	}
+
+	protected void onPreExecute(final SupportRequest supportRequest, final Request request) throws Exception {
+
+	}
+
+	void publishComplete(final SupportRequest supportRequest) {
+		onComplete(supportRequest);
+	}
+
+	void publishPostProcess(final SupportRequest supportRequest, final Response response, final T t) {
+		onPostProcess(supportRequest, response, t);
 	}
 }
