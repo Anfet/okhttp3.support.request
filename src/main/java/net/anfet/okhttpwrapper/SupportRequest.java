@@ -20,11 +20,11 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
  * Created by Oleg on 13.07.2016.
@@ -95,11 +95,18 @@ public class SupportRequest {
 		}
 	}
 
-	public static void init(int readTimeout, int connectTimeout, HttpLoggingInterceptor.Level logLevel) {
+	public static void init(int readTimeout, int connectTimeout, Interceptor... interceptors) {
 		Assert.assertNull(okHttpClient);
 
-		HttpLoggingInterceptor logging = new HttpLoggingInterceptor().setLevel(logLevel);
-		okHttpClient = new OkHttpClient.Builder().readTimeout(readTimeout, TimeUnit.MILLISECONDS).connectTimeout(connectTimeout, TimeUnit.MILLISECONDS).addInterceptor(logging).build();
+		OkHttpClient.Builder builder = new OkHttpClient.Builder()
+							   .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
+							   .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS);
+
+		for (Interceptor interceptor : interceptors) {
+			builder.addInterceptor(interceptor);
+		}
+
+		okHttpClient = builder.build();
 		SupportRequest.setOkHttpClient(okHttpClient);
 	}
 
@@ -170,13 +177,13 @@ public class SupportRequest {
 
 
 	public void cancel() {
-		if (runningTask != null && runningTask.isRuninng()) {
+		if (runningTask != null && runningTask.alive()) {
 			runningTask.cancel();
 		}
 	}
 
 	public void execute() {
-		if (runningTask != null && !runningTask.isRuninng()) {
+		if (runningTask != null && !runningTask.alive()) {
 			return;
 		}
 
@@ -200,7 +207,7 @@ public class SupportRequest {
 			response = okHttpClient.newCall(request).execute();
 			try {
 
-				if (listener != null && (runningTask == null || runningTask.isRuninng())) {
+				if (listener != null && (runningTask == null || runningTask.alive())) {
 					//если мы сюда привалили - значит запрос дошел до сервера и получился ответ. Может быть и не всегда хороший
 					//оповещаем листенеры
 					listener.publishResponce(this, response);
@@ -216,7 +223,7 @@ public class SupportRequest {
 	private void onProcessError(Exception e) {
 		//если мы упали сюда, то тут может быть connectionTimeout или еще какая ересь на транспортном уровне. чаще всего может встречаться отмена запроса, которая тоже падает сюда
 
-		if (listener != null && (runningTask == null || runningTask.isRuninng())) {
+		if (listener != null && (runningTask == null || runningTask.alive())) {
 			try {
 				listener.publishError(this, e);
 			} catch (Exception ex) {
@@ -228,6 +235,6 @@ public class SupportRequest {
 	}
 
 	public boolean isCancelled() {
-		return runningTask != null && !runningTask.isRuninng();
+		return runningTask != null && !runningTask.alive();
 	}
 }
