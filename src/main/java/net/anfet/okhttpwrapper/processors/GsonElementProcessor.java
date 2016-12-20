@@ -3,7 +3,7 @@ package net.anfet.okhttpwrapper.processors;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 
-import net.anfet.okhttpwrapper.abstractions.ResponceProcessor;
+import net.anfet.okhttpwrapper.ResponceProcessor;
 
 import okhttp3.Response;
 

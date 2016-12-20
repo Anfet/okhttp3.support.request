@@ -1,6 +1,4 @@
-package net.anfet.okhttpwrapper.abstractions;
-
-import net.anfet.okhttpwrapper.SupportRequest;
+package net.anfet.okhttpwrapper;
 
 import okhttp3.Response;
 
