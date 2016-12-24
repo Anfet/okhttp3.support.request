@@ -11,6 +11,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -37,6 +38,9 @@ import okhttp3.Response;
  */
 public class SupportRequest {
 
+
+	private static final AtomicLong pingSummary = new AtomicLong(0);
+	private static final AtomicLong requestsCount = new AtomicLong(0);
 	/**
 	 * контекст okhttp
 	 */
@@ -82,7 +86,7 @@ public class SupportRequest {
 
 	private SupportRequest() {
 		builder = new Request.Builder();
-		builder.cacheControl(cacheControl);
+		if (cacheControl != null) builder.cacheControl(cacheControl);
 		listener = null;
 		response = null;
 	}
@@ -217,6 +221,8 @@ public class SupportRequest {
 			protected void doInBackground() throws Exception {
 				response = okHttpClient.newCall(request).execute();
 				fetch = response.receivedResponseAtMillis() - response.sentRequestAtMillis();
+				pingSummary.addAndGet(fetch);
+				requestsCount.incrementAndGet();
 				try {
 					if (listener != null) {
 						result = listener.publishResponce(SupportRequest.this, response);
@@ -278,6 +284,10 @@ public class SupportRequest {
 				//запускаем на выполение
 				response = okHttpClient.newCall(request).execute();
 
+				fetch = response.receivedResponseAtMillis() - response.sentRequestAtMillis();
+				pingSummary.addAndGet(fetch);
+				requestsCount.incrementAndGet();
+
 				if (listener != null) {
 					Object result = listener.publishResponce(this, response);
 					listener.publishPostProcess(this, response, result);
@@ -300,5 +310,9 @@ public class SupportRequest {
 	@Override
 	public String toString() {
 		return request == null ? super.toString() : request.toString();
+	}
+
+	public static Long avgPing() {
+		return requestsCount.get() == 0 ? 0 : (pingSummary.get() / requestsCount.get());
 	}
 }
