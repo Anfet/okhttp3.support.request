@@ -1,6 +1,8 @@
 package net.anfet.okhttpwrapper;
 
 
+import android.support.annotation.WorkerThread;
+
 import junit.framework.Assert;
 
 import net.anfet.tasks.Runner;
@@ -71,6 +73,7 @@ public class SupportRequest {
 	 * время выборки
 	 */
 	private Long fetch;
+	private Runner runner = null;
 
 //	private int hashCode = 0;
 
@@ -188,6 +191,10 @@ public class SupportRequest {
 
 	}
 
+	public Runner getRunner() {
+		return runner;
+	}
+
 	public SupportRequest setListener(WorkerThreadListener listener) {
 		this.listener = listener;
 		return this;
@@ -200,7 +207,7 @@ public class SupportRequest {
 
 	public void queue(Object owner) {
 
-		Tasks.execute(new Runner(owner) {
+		runner = new Runner(owner) {
 
 			Object result = null;
 
@@ -268,10 +275,12 @@ public class SupportRequest {
 			}
 
 
-		});
+		};
+
+		Tasks.execute(runner);
 	}
 
-
+	@WorkerThread
 	public void execute() {
 		try {
 
@@ -293,7 +302,9 @@ public class SupportRequest {
 					listener.publishPostProcess(this, response, result);
 				}
 			} finally {
-				response.close();
+				if (response != null) {
+					response.close();
+				}
 			}
 		} catch (Exception e) {
 			if (listener != null) listener.publishError(this, e);

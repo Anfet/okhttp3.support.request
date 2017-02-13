@@ -116,6 +116,9 @@ public class MainThreadListener<T> extends WorkerThreadListener<T> {
 	 * @param params параметры для передачи
 	 */
 	public final void publishProgress(final SupportRequest supportRequest, final Object... params) {
+
+		if (!supportRequest.getRunner().alive()) return;
+
 		final CountDownLatch latch = new CountDownLatch(1);
 		handler.post(new Runnable() {
 			@Override
