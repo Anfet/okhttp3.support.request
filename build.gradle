@@ -44,11 +44,10 @@ android {
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
-    compile 'com.squareup.okhttp3:okhttp:3.5.0'
-    compile 'com.squareup.okhttp3:logging-interceptor:3.5.0'
-    compile 'com.squareup.okhttp3:okhttp-urlconnection:3.5.0'
-//    compile 'com.github.Anfet:tasks:1.0.8'
-    compile 'com.github.Anfet:tasks:-SNAPSHOT'
-    compile 'com.google.code.gson:gson:2.7'
-    compile 'com.android.support:support-annotations:25.1.1'
+    compile 'com.squareup.okhttp3:okhttp:3.6.0'
+    compile 'com.squareup.okhttp3:logging-interceptor:3.6.0'
+    compile 'com.squareup.okhttp3:okhttp-urlconnection:3.6.0'
+    compile 'com.github.Anfet:tasks:1.0.0.11'
+    compile 'com.google.code.gson:gson:+'
+    compile 'com.android.support:support-annotations:+'
 }

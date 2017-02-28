@@ -251,6 +251,10 @@ public class SupportRequest {
 			protected void onError(Throwable throwable) {
 				super.onError(throwable);
 
+				if (throwable instanceof InterruptedException) {
+					return;
+				}
+
 				if (throwable instanceof SocketTimeoutException) {
 					throwable = new SocketTimeoutException("Unable to connect to server in " + okHttpClient.connectTimeoutMillis() + " msec");
 				}
